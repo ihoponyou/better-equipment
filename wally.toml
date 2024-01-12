@@ -1,0 +1,12 @@
+[package]
+name = "noah/better-equipment"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
+Component = "sleitnick/component@2.4.6"
+Comm = "sleitnick/comm@1.0.1"
+Knit = "sleitnick/knit@^1"
+Loader = "sleitnick/loader@2.0.0"
+Trove = "sleitnick/trove@1.1.0"

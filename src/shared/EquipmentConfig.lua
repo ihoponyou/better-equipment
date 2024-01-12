@@ -1,0 +1,5 @@
+return {
+    ClassicSword = {
+        SlotType = "Primary"
+    }
+}

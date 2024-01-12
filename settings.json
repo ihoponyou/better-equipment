@@ -1,0 +1,6 @@
+{
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": true
+    },
+    "luau-lsp.sourcemap.includeNonScripts": false
+}

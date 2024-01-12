@@ -1,0 +1,9 @@
+# Project place file
+/better-equipment.rbxl
+
+# Roblox Studio lock files
+/*.rbxlx.lock
+/*.rbxl.lock
+
+# imports
+Packages
