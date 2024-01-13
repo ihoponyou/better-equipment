@@ -24,9 +24,9 @@ function EquipmentClient:Construct()
     self.DropRequest = self._clientComm:GetSignal("DropRequest")
 
     self.IsEquipped = self._clientComm:GetProperty("IsEquipped")
-    self.IsEquipped:Observe(function(isEquipped: boolean)
+    -- self.IsEquipped:Observe(function(isEquipped: boolean)
         -- print(self.Instance.Name.." equipped", isEquipped)
-    end)
+    -- end)
     self.EquipRequest = self._clientComm:GetSignal("EquipRequest")
     self.UnequipRequest = self._clientComm:GetSignal("UnequipRequest")
 end

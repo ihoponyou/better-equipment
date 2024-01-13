@@ -8,6 +8,7 @@ local Comm = require(ReplicatedStorage.Packages.Comm)
 local InventoryService = Knit.GetService("InventoryService")
 
 local EquipmentConfig = require(ReplicatedStorage.Shared.EquipmentConfig)
+local ModelUtil = require(ReplicatedStorage.Shared.Modules.ModelUti)
 
 local Equipment = Component.new({
 	Tag = "Equipment",
@@ -44,6 +45,9 @@ function Equipment:Construct()
 	self.PickUpRequest = self._serverComm:CreateSignal("PickUpRequest")
 
 	self.PickUpPrompt = self._trove:Construct(Instance, "ProximityPrompt") :: ProximityPrompt
+	self.PickUpPrompt.ClickablePrompt = false
+	self.PickUpPrompt.ActionText = "Pick Up"
+	self.PickUpPrompt.ObjectText = self.Instance.Name
 	self.PickUpPrompt.Parent = self.WorldModel
 	self.PickUpPrompt.Triggered:Connect(function(playerWhoTriggered)
 		self:PickUp(playerWhoTriggered)
@@ -75,6 +79,15 @@ end
 
 -- MISC ----------------------------------------------------------------
 
+function Equipment:GetRootJoint(): Motor6D
+	local rootJoint = self.WorldModel.PrimaryPart:FindFirstChild("RootJoint")
+	if not rootJoint then
+		warn(self.Instance.Name..": RootJoint has been presumed dead")
+		rootJoint = self:_newRootJoint()
+	end
+	return rootJoint
+end
+
 function Equipment:_newRootJoint(): Motor6D
 	local rootJoint = Instance.new("Motor6D")
 	rootJoint.Name = "RootJoint"
@@ -86,11 +99,7 @@ end
 function Equipment:RigTo(character: Model, limb: string)
 	if not character then error("nil character") end
 
-	local rootJoint = self.WorldModel.PrimaryPart:FindFirstChild("RootJoint")
-	if not rootJoint then
-		warn(self.Instance.Name..": RootJoint has been presumed dead")
-		rootJoint = self:_newRootJoint()
-	end
+	local rootJoint = self:GetRootJoint()
 
 	local limbPart = character:FindFirstChild(limb)
 	if not limbPart then error("nil " .. limb) end
@@ -100,11 +109,7 @@ function Equipment:RigTo(character: Model, limb: string)
 end
 
 function Equipment:Unrig()
-	local rootJoint = self.WorldModel.PrimaryPart:FindFirstChild("RootJoint")
-	if not rootJoint then
-		warn("RootJoint has been presumed dead")
-		rootJoint = self:_newRootJoint()
-	end
+	local rootJoint = self:GetRootJoint()
 
 	self.WorldModel.Parent = self.Instance
 	rootJoint.Part0 = nil
@@ -114,12 +119,27 @@ end
 
 function Equipment:PickUp(player: Player)
 	if self.Owner ~= nil then return end
+
+	local character = player.Character
+	local humanoid = character:FindFirstChild("Humanoid")
+	local state: Enum.HumanoidStateType = humanoid:GetState()
+	if state == Enum.HumanoidStateType.Physics or state == Enum.HumanoidStateType.Dead then
+		return
+	end
+
 	local success = InventoryService:AddEquipment(player, self)
 	if not success then return end
 
 	self.Owner = player
 
+	self._deathConn = humanoid.Died:Connect(function()
+		self:Drop(self.Owner)
+	end)
+
+	ModelUtil.SetPartProperty(self.WorldModel, "CanCollide", false)
 	self:RigTo(player.Character, self.Config.HolsterLimb)
+	local rootJoint = self:GetRootJoint()
+	rootJoint.C0 = self.Config.RootJointC0.Holstered
 
 	self.PickUpPrompt.Enabled = false
 	self.IsPickedUp:Set(true)
@@ -131,13 +151,17 @@ function Equipment:Drop(player: Player)
 	if not success then return end
 
 	if self.IsEquipped:Get() then
-		print("forced unequip")
+		-- print("forced unequip")
 		self:Unequip()
 	end
 
 	self.Owner = nil
 
+	self._deathConn:Disconnect()
+	self._deathConn = nil
+
 	self:Unrig()
+	ModelUtil.SetPartProperty(self.WorldModel, "CanCollide", true)
 
 	self.PickUpPrompt.Enabled = true
 	self.IsPickedUp:Set(false)
@@ -147,14 +171,20 @@ end
 
 function Equipment:Equip(player: Player)
 	if self.Owner ~= player then return end
+
 	self:RigTo(self.Owner.Character, "Right Arm")
+	local rootJoint = self:GetRootJoint()
+	rootJoint.C0 = self.Config.RootJointC0.Equipped
 
 	self.IsEquipped:Set(true)
 end
 
 function Equipment:Unequip(player: Player)
 	if self.Owner ~= player then return end
+
 	self:RigTo(self.Owner.Character, self.Config.HolsterLimb)
+	local rootJoint = self:GetRootJoint()
+	rootJoint.C0 = self.Config.RootJointC0.Holstered
 
 	self.IsEquipped:Set(false)
 end

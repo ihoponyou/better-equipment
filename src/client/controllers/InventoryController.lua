@@ -19,13 +19,14 @@ local InventoryController = Knit.CreateController({
 })
 
 function InventoryController:_tryEquip(slot: string)
-    local currentItem = self.Inventory[self.ActiveSlot]
+    local oldSlot = self.ActiveSlot
+    local currentItem = self.Inventory[oldSlot]
     if currentItem ~= nil then
         local equipment = EquipmentClient:FromInstance(currentItem)
         equipment:Unequip()
 
-        if slot == self.ActiveSlot then
-            self:SetActiveSlot(nil)
+        self:SetActiveSlot(nil)
+        if slot == oldSlot then
             return
         end
     end
@@ -34,6 +35,7 @@ function InventoryController:_tryEquip(slot: string)
     if not newItem then return end
     local equipment = EquipmentClient:FromInstance(newItem)
     equipment:Equip()
+
     self:SetActiveSlot(equipment.Config.SlotType)
 end
 
@@ -42,10 +44,16 @@ function InventoryController:_tryDrop()
     if currentItem ~= nil then
         local equipment = EquipmentClient:FromInstance(currentItem)
         equipment:Drop()
+
+        self:SetActiveSlot(nil)
     end
 end
 
 function InventoryController:KnitInit()
+    Knit.Player.CharacterRemoving:Connect(function(_character)
+        self:SetActiveSlot(nil)
+    end)
+
     UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
         if gameProcessedEvent then return end
         if input.KeyCode == Enum.KeyCode.One then
@@ -69,6 +77,7 @@ function InventoryController:KnitStart()
 end
 
 function InventoryController:SetActiveSlot(slot: string)
+    -- print(self.ActiveSlot, "->", slot)
     self.ActiveSlot = slot
     self.ActiveSlotChanged:Fire(slot)
 end
