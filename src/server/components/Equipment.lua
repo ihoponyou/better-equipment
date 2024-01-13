@@ -7,7 +7,6 @@ local Trove = require(ReplicatedStorage.Packages.Trove)
 local Comm = require(ReplicatedStorage.Packages.Comm)
 
 local InventoryService = Knit.GetService("InventoryService")
-local serverComm = Comm.ServerComm.new(ReplicatedStorage.Comm, "EquipmentComm")
 
 local EquipmentConfig = require(ReplicatedStorage.Shared.EquipmentConfig)
 
@@ -17,106 +16,155 @@ local Equipment = Component.new({
 
 function Equipment:Construct()
 	self._trove = Trove.new()
+	self._serverComm = self._trove:Construct(Comm.ServerComm, self.Instance)
 
 	self.Config = EquipmentConfig[self.Instance.Name]
 
-	self.WorldModel = self._trove:Clone(ReplicatedStorage.Equipment[self.Instance.Name].WorldModel) :: Model
+	self.WorldModel = self._trove:Clone(ReplicatedStorage.Equipment[self.Instance.Name].WorldModel)
 	self.WorldModel.Parent = self.Instance
+	-- destroy component if worldmodel is destroyed or drop if character is destroyed
+	self._trove:Connect(self.WorldModel.AncestryChanged, function(child, parent)
+		-- only consider when things are destroyed
+		if parent ~= nil then return end
 
-	self.IsEquipped = false
-	self.EquipRequest = serverComm:CreateSignal("EquipRequest")
-	self.EquipRequest:Connect(function(player, equipping)
-		if equipping then
-			self:Equip(player)
+		if child ~= self.WorldModel then
+			-- owner died/left
+			self:Drop()
 		else
-			self:Unequip(player)
+			-- worldmodel DESTROYED!!!!!
+			InventoryService:RemoveEquipment(self.Owner, self)
+			self.Instance:Destroy()
 		end
 	end)
 
-	self.IsPickedUp = false
-	self.PickUpRequest = serverComm:CreateSignal("PickUpRequest")
-	self.PickUpRequest:Connect(function(player, pickingUp)
-		local success = InventoryService:PickUp(player, self, pickingUp)
-		if not success then return end
-		if pickingUp then
-			self:_onPickUp(player)
-		else
-			self:_onDrop()
+	-- PICK UP / DROP ----------------------------------------------------
+	self.IsPickedUp = self._serverComm:CreateProperty("IsPickedUp", false)
+
+	self.PickedUp = self._serverComm:CreateSignal("PickedUp")
+
+	self.PickUpPrompt = self._trove:Construct(Instance, "ProximityPrompt") :: ProximityPrompt
+    self.PickUpPrompt.Triggered:Connect(function(playerWhoTriggered)
+        local success = self:PickUp(playerWhoTriggered)
+		if success then
+			self.PickedUp:Fire(playerWhoTriggered)
+		end
+    end)
+	self.PickUpPrompt.Parent = self.WorldModel
+
+	self.Dropped = self._serverComm:CreateSignal("Dropped")
+
+	self._trove:Connect(self.Dropped, function(player)
+		if self.Owner ~= player then return end
+		local success = self:Drop()
+		if success then
+			-- cant use owner since it will be nil
+			self.Dropped:Fire(player)
 		end
 	end)
-end
 
-function Equipment:Equip(player: Player)
-	if self.Owner ~= player then return end
-	if self.IsEquipped then return end
-	print("equip")
+	-- EQUIP / UNEQUIP ----------------------------------------------------
+	self.IsEquipped = self._serverComm:CreateProperty("IsEquipped", false)
 
-	self.IsEquipped = true
-	self.WorldModel.Parent = self.Owner.Character
-	self.WorldModel.PrimaryPart.RootJoint.Part0 = self.Owner.Character.PrimaryPart
-
-	self.EquipRequest:Fire(player, true)
-end
-
-function Equipment:Unequip(player: Player)
-	if self.Owner ~= player then return end
-	if not self.IsEquipped then return end
-	print("unequip")
-
-	self.IsEquipped = false
-	self.WorldModel.Parent = self.Instance
-	self.WorldModel.PrimaryPart.RootJoint.Part0 = nil
-
-	self.EquipRequest:Fire(player, false)
-end
-
-function Equipment:_onDeath()
-	if self.Owner.Character:GetPivot().Position.Y < workspace.FallenPartsDestroyHeight then
-		InventoryService:PickUp(self.Owner, self, false)
-		self.Instance:Destroy()
-	else
-		InventoryService:PickUp(self.Owner, self, false)
-		self:_onDrop()
-	end
-end
-
-function Equipment:_onPickUp(player: Player)
-	print'pickup'
-
-	self.IsPickedUp = true
-	self.Owner = player
-
-	self._deathConn = self._trove:Connect(self.Owner.CharacterRemoving, function(_)
-		self:_onDeath()
+	self.Equipped = self._serverComm:CreateSignal("Equipped")
+	self._trove:Connect(self.Equipped, function(player: Player)
+		if self.Owner ~= player then return end
+		local success = self:Equip()
+		if success then
+			self.Equipped:Fire(self.Owner)
+		end
 	end)
 
-	self.Instance.Parent = player:FindFirstChild("Inventory")
-	
-	self.PickUpRequest:Fire(self.Owner, true)
-end
-
-function Equipment:_onDrop()
-	print'drop'
-
-	if self.IsEquipped then
-		self:Unequip(self.Owner)
-	end
-	
-	self.IsPickedUp = false
-	local oldOwner = self.Owner
-	self.Owner = nil
-	
-	self._deathConn:Disconnect()
-	self._deathConn = nil
-	
-	self.Instance.Parent = workspace
-
-	self.PickUpRequest:Fire(oldOwner, false)
+	self.Unequipped = self._serverComm:CreateSignal("Unequipped")
+	self._trove:Connect(self.Unequipped, function(player: Player)
+		if self.Owner ~= player then return end
+		local success = self:Unequip()
+		if success then
+			self.Unequipped:Fire(self.Owner)
+		end
+	end)
 end
 
 function Equipment:Stop()
-	self.Owner = nil
 	self._trove:Destroy()
+end
+
+function Equipment:RigToCharacter(character: Model, limb: string)
+	if not character then error("nil character") end
+
+	local rootJoint = self.WorldModel.PrimaryPart:FindFirstChild("RootJoint")
+	if not rootJoint then error("nil RootJoint") end
+
+	local limbPart = character:FindFirstChild(limb)
+	if not limbPart then error("nil "..limb) end
+
+	self.WorldModel.Parent = character
+	rootJoint.Part0 = limbPart
+end
+
+function Equipment:Unrig()
+	local rootJoint = self.WorldModel.PrimaryPart:FindFirstChild("RootJoint")
+	if not rootJoint then
+		warn("RootJoint has been presumed dead")
+		rootJoint = Instance.new("Motor6D")
+		rootJoint.Name = "RootJoint"
+		rootJoint.Parent = self.WorldModel.PrimaryPart
+		rootJoint.Part1 = self.WorldModel.PrimaryPart
+	end
+
+	self.WorldModel.Parent = self.Instance
+	rootJoint.Part0 = nil
+end
+
+-- PICK UP / DROP ----------------------------------------------------
+
+function Equipment:PickUp(player: Player): boolean?
+	local success = InventoryService:AddEquipment(player, self)
+	if not success then return success end
+
+	self.Owner = player
+
+	self:RigToCharacter(player.Character, self.Config.HolsterLimb)
+
+	self.PickUpPrompt.Enabled = false
+	self.IsPickedUp:Set(true)
+
+	return true
+end
+
+function Equipment:Drop(): boolean?
+	if self.Owner ~= nil then
+		local success = InventoryService:RemoveEquipment(self.Owner, self)
+		if not success then return success end
+	end
+
+	if self.IsEquipped:Get() then self:Unequip() end
+
+	self.Owner = nil
+
+	self:Unrig()
+
+	self.PickUpPrompt.Enabled = true
+	self.IsPickedUp:Set(false)
+
+	return true
+end
+
+-- EQUIP / UNEQUIP ----------------------------------------------------
+
+function Equipment:Equip(): boolean?
+	self:RigToCharacter(self.Owner.Character, "Right Arm")
+
+	self.IsEquipped:Set(true)
+
+	return true
+end
+
+function Equipment:Unequip(): boolean?
+	self:RigToCharacter(self.Owner.Character, self.Config.HolsterLimb)
+
+	self.IsEquipped:Set(false)
+
+	return true
 end
 
 return Equipment
