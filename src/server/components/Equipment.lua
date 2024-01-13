@@ -1,4 +1,3 @@
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Component = require(ReplicatedStorage.Packages.Component)
@@ -11,7 +10,7 @@ local InventoryService = Knit.GetService("InventoryService")
 local EquipmentConfig = require(ReplicatedStorage.Shared.EquipmentConfig)
 
 local Equipment = Component.new({
-	Tag = "Equipment";
+	Tag = "Equipment",
 })
 
 function Equipment:Construct()
@@ -32,7 +31,9 @@ function Equipment:Construct()
 			self:Drop()
 		else
 			-- worldmodel DESTROYED!!!!!
-			InventoryService:RemoveEquipment(self.Owner, self)
+			if self.Owner ~= nil then
+				InventoryService:RemoveEquipment(self.Owner, self)
+			end
 			self.Instance:Destroy()
 		end
 	end)
@@ -40,47 +41,31 @@ function Equipment:Construct()
 	-- PICK UP / DROP ----------------------------------------------------
 	self.IsPickedUp = self._serverComm:CreateProperty("IsPickedUp", false)
 
-	self.PickedUp = self._serverComm:CreateSignal("PickedUp")
+	self.PickUpRequest = self._serverComm:CreateSignal("PickUpRequest")
 
 	self.PickUpPrompt = self._trove:Construct(Instance, "ProximityPrompt") :: ProximityPrompt
-    self.PickUpPrompt.Triggered:Connect(function(playerWhoTriggered)
-        local success = self:PickUp(playerWhoTriggered)
-		if success then
-			self.PickedUp:Fire(playerWhoTriggered)
-		end
-    end)
 	self.PickUpPrompt.Parent = self.WorldModel
+	self.PickUpPrompt.Triggered:Connect(function(playerWhoTriggered)
+		self:PickUp(playerWhoTriggered)
+	end)
 
-	self.Dropped = self._serverComm:CreateSignal("Dropped")
+	self.DropRequest = self._serverComm:CreateSignal("DropRequest")
 
-	self._trove:Connect(self.Dropped, function(player)
-		if self.Owner ~= player then return end
-		local success = self:Drop()
-		if success then
-			-- cant use owner since it will be nil
-			self.Dropped:Fire(player)
-		end
+	self._trove:Connect(self.DropRequest, function(player)
+		self:Drop(player)
 	end)
 
 	-- EQUIP / UNEQUIP ----------------------------------------------------
 	self.IsEquipped = self._serverComm:CreateProperty("IsEquipped", false)
 
-	self.Equipped = self._serverComm:CreateSignal("Equipped")
-	self._trove:Connect(self.Equipped, function(player: Player)
-		if self.Owner ~= player then return end
-		local success = self:Equip()
-		if success then
-			self.Equipped:Fire(self.Owner)
-		end
+	self.EquipRequest = self._serverComm:CreateSignal("EquipRequest")
+	self._trove:Connect(self.EquipRequest, function(player: Player)
+		self:Equip(player)
 	end)
 
-	self.Unequipped = self._serverComm:CreateSignal("Unequipped")
-	self._trove:Connect(self.Unequipped, function(player: Player)
-		if self.Owner ~= player then return end
-		local success = self:Unequip()
-		if success then
-			self.Unequipped:Fire(self.Owner)
-		end
+	self.UnequipRequest = self._serverComm:CreateSignal("UnequipRequest")
+	self._trove:Connect(self.UnequipRequest, function(player: Player)
+		self:Unequip(player)
 	end)
 end
 
@@ -88,14 +73,27 @@ function Equipment:Stop()
 	self._trove:Destroy()
 end
 
-function Equipment:RigToCharacter(character: Model, limb: string)
+-- MISC ----------------------------------------------------------------
+
+function Equipment:_newRootJoint(): Motor6D
+	local rootJoint = Instance.new("Motor6D")
+	rootJoint.Name = "RootJoint"
+	rootJoint.Parent = self.WorldModel.PrimaryPart
+	rootJoint.Part1 = self.WorldModel.PrimaryPart
+	return rootJoint
+end
+
+function Equipment:RigTo(character: Model, limb: string)
 	if not character then error("nil character") end
 
 	local rootJoint = self.WorldModel.PrimaryPart:FindFirstChild("RootJoint")
-	if not rootJoint then error("nil RootJoint") end
+	if not rootJoint then
+		warn(self.Instance.Name..": RootJoint has been presumed dead")
+		rootJoint = self:_newRootJoint()
+	end
 
 	local limbPart = character:FindFirstChild(limb)
-	if not limbPart then error("nil "..limb) end
+	if not limbPart then error("nil " .. limb) end
 
 	self.WorldModel.Parent = character
 	rootJoint.Part0 = limbPart
@@ -105,10 +103,7 @@ function Equipment:Unrig()
 	local rootJoint = self.WorldModel.PrimaryPart:FindFirstChild("RootJoint")
 	if not rootJoint then
 		warn("RootJoint has been presumed dead")
-		rootJoint = Instance.new("Motor6D")
-		rootJoint.Name = "RootJoint"
-		rootJoint.Parent = self.WorldModel.PrimaryPart
-		rootJoint.Part1 = self.WorldModel.PrimaryPart
+		rootJoint = self:_newRootJoint()
 	end
 
 	self.WorldModel.Parent = self.Instance
@@ -117,27 +112,28 @@ end
 
 -- PICK UP / DROP ----------------------------------------------------
 
-function Equipment:PickUp(player: Player): boolean?
+function Equipment:PickUp(player: Player)
+	if self.Owner ~= nil then return end
 	local success = InventoryService:AddEquipment(player, self)
-	if not success then return success end
+	if not success then return end
 
 	self.Owner = player
 
-	self:RigToCharacter(player.Character, self.Config.HolsterLimb)
+	self:RigTo(player.Character, self.Config.HolsterLimb)
 
 	self.PickUpPrompt.Enabled = false
 	self.IsPickedUp:Set(true)
-
-	return true
 end
 
-function Equipment:Drop(): boolean?
-	if self.Owner ~= nil then
-		local success = InventoryService:RemoveEquipment(self.Owner, self)
-		if not success then return success end
-	end
+function Equipment:Drop(player: Player)
+	if self.Owner ~= player then return end
+	local success = InventoryService:RemoveEquipment(self.Owner, self)
+	if not success then return end
 
-	if self.IsEquipped:Get() then self:Unequip() end
+	if self.IsEquipped:Get() then
+		print("forced unequip")
+		self:Unequip()
+	end
 
 	self.Owner = nil
 
@@ -145,26 +141,22 @@ function Equipment:Drop(): boolean?
 
 	self.PickUpPrompt.Enabled = true
 	self.IsPickedUp:Set(false)
-
-	return true
 end
 
 -- EQUIP / UNEQUIP ----------------------------------------------------
 
-function Equipment:Equip(): boolean?
-	self:RigToCharacter(self.Owner.Character, "Right Arm")
+function Equipment:Equip(player: Player)
+	if self.Owner ~= player then return end
+	self:RigTo(self.Owner.Character, "Right Arm")
 
 	self.IsEquipped:Set(true)
-
-	return true
 end
 
-function Equipment:Unequip(): boolean?
-	self:RigToCharacter(self.Owner.Character, self.Config.HolsterLimb)
+function Equipment:Unequip(player: Player)
+	if self.Owner ~= player then return end
+	self:RigTo(self.Owner.Character, self.Config.HolsterLimb)
 
 	self.IsEquipped:Set(false)
-
-	return true
 end
 
 return Equipment
