@@ -1,3 +1,6 @@
+
+-- allows an item to be picked up, dropped, equipped, and unequipped
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Component = require(ReplicatedStorage.Packages.Component)
@@ -41,8 +44,6 @@ function Equipment:Construct()
 
 	-- PICK UP / DROP ----------------------------------------------------
 	self.IsPickedUp = self._serverComm:CreateProperty("IsPickedUp", false)
-
-	self.PickUpRequest = self._serverComm:CreateSignal("PickUpRequest")
 
 	self.PickUpPrompt = self._trove:Construct(Instance, "ProximityPrompt") :: ProximityPrompt
 	self.PickUpPrompt.ClickablePrompt = false

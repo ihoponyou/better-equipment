@@ -1,4 +1,6 @@
 
+-- allows clients to request interaction with equipment (server)
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Comm = require(ReplicatedStorage.Packages.Comm)
@@ -20,16 +22,14 @@ function EquipmentClient:Construct()
     self.WorldModel = self.Instance:WaitForChild("WorldModel")
 
     self.IsPickedUp = self._clientComm:GetProperty("IsPickedUp")
-    self.PickUpRequest = self._clientComm:GetSignal("PickUpRequest")
     self.DropRequest = self._clientComm:GetSignal("DropRequest")
 
     self.IsEquipped = self._clientComm:GetProperty("IsEquipped")
-    -- self.IsEquipped:Observe(function(isEquipped: boolean)
-        -- print(self.Instance.Name.." equipped", isEquipped)
-    -- end)
     self.EquipRequest = self._clientComm:GetSignal("EquipRequest")
     self.UnequipRequest = self._clientComm:GetSignal("UnequipRequest")
 end
+
+-- pickup is handled via proximity prompt
 
 function EquipmentClient:Equip()
     if self.IsPickedUp:Get() then
