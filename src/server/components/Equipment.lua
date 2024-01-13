@@ -29,7 +29,7 @@ function Equipment:Construct()
 
 		if child ~= self.WorldModel then
 			-- owner died/left
-			self:Drop()
+			self:Drop(self.Owner)
 		else
 			-- worldmodel DESTROYED!!!!!
 			if self.Owner ~= nil then
@@ -132,7 +132,7 @@ function Equipment:PickUp(player: Player)
 
 	self.Owner = player
 
-	self._deathConn = humanoid.Died:Connect(function()
+	self._deathConn = self._trove:Connect(humanoid.Died, function()
 		self:Drop(self.Owner)
 	end)
 
@@ -157,6 +157,7 @@ function Equipment:Drop(player: Player)
 
 	self.Owner = nil
 
+	self._trove:Remove(self._deathConn)
 	self._deathConn:Disconnect()
 	self._deathConn = nil
 
