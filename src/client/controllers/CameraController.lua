@@ -8,7 +8,7 @@ local Signal = require(ReplicatedStorage.Packages.Signal)
 local CameraController = Knit.CreateController({
     Name = "CameraController",
 
-    InFirstPerson = false,
+    InFirstPerson = true,
     AllowFirstPerson = true,
     PointOfViewChanged = Signal.new(),
 
@@ -19,7 +19,6 @@ local CameraController = Knit.CreateController({
 
 function CameraController:KnitInit()
     self._playerModule = require(Knit.Player.PlayerScripts:WaitForChild("PlayerModule"))
-    self._playerModule:ToggleShiftLock(not self.InFirstPerson)
 
     UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
         if gameProcessedEvent then return end
@@ -30,19 +29,24 @@ function CameraController:KnitInit()
     end)
 end
 
+function CameraController:KnitStart()
+    self:TogglePointOfView(self.InFirstPerson)
+end
+
 function CameraController:TogglePointOfView(firstPerson: boolean?)
     local enterFirstPerson = if firstPerson == nil then not self.InFirstPerson else firstPerson
 
     if not self.AllowFirstPerson and enterFirstPerson then return end
 
     -- print(self.InFirstPerson, "->", enterFirstPerson)
+
     self.InFirstPerson = enterFirstPerson
 
     if enterFirstPerson then
 		Knit.Player.CameraMinZoomDistance = 0.5
 		Knit.Player.CameraMaxZoomDistance = 0.5
 	else
-		Knit.Player.CameraMaxZoomDistance = 8
+		Knit.Player.CameraMaxZoomDistance = 12
 		Knit.Player.CameraMinZoomDistance = 4
 	end
 
