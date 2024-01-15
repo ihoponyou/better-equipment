@@ -2,10 +2,9 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
-
-local CameraController
 
 local Viewmodel = require(script.Parent.Parent.components.Viewmodel)
 
@@ -26,13 +25,18 @@ function ViewmodelController:KnitInit()
     Knit.Player.CharacterRemoving:Connect(function()
         self.Viewmodel.Instance:Destroy()
     end)
-end
 
-function ViewmodelController:KnitStart()
-    CameraController = Knit.GetController("CameraController")
-
-    CameraController.PointOfViewChanged:Connect(function(inFirstPerson: boolean)
-        self.Viewmodel:ToggleVisibility(inFirstPerson)
+    RunService.RenderStepped:Connect(function(_dt)
+        if self.Viewmodel == nil then return end
+        if self.ShowViewmodel then
+            if not self.Viewmodel.Visible then
+                self.Viewmodel:ToggleVisibility(true)
+            end
+        else
+            if self.Viewmodel.Visible then
+                self.Viewmodel:ToggleVisibility(false)
+            end
+        end
     end)
 end
 

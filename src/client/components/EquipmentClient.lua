@@ -47,11 +47,9 @@ function EquipmentClient:Start()
         if not self.IsPickedUp:Get() then return end
         if not self.IsEquipped:Get() then return end
         if inFirstPerson then
-            self:RigTo(ViewmodelController.Viewmodel.Instance, "Right Arm", self.Config.RootJointC0.Equipped.Viewmodel)
-            ViewmodelController.ShowViewmodel = true
+            self:_rigToViewmodel()
         else
-            self:RigTo(Players.LocalPlayer.Character, "Right Arm", self.Config.RootJointC0.Equipped.World)
-            ViewmodelController.ShowViewmodel = false
+            self:_rigToCharacter()
         end
     end)
 end
@@ -95,6 +93,20 @@ function EquipmentClient:RigTo(character: Model, limb: string, c0: CFrame?)
 	end
 end
 
+function EquipmentClient:_rigToCharacter(holstered: boolean)
+    ViewmodelController.ShowViewmodel = false
+    if holstered then
+        self:RigTo(Players.LocalPlayer.Character, self.Config.HolsterLimb, self.Config.RootJointC0.Holstered)
+    else
+        self:RigTo(Players.LocalPlayer.Character, "Right Arm", self.Config.RootJointC0.Equipped.World)
+    end
+end
+
+function EquipmentClient:_rigToViewmodel()
+    ViewmodelController.ShowViewmodel = true
+    self:RigTo(ViewmodelController.Viewmodel.Instance, "Right Arm", self.Config.RootJointC0.Equipped.Viewmodel)
+end
+
 -- pickup is handled via proximity prompt
 
 function EquipmentClient:Equip()
@@ -105,10 +117,9 @@ end
 
 function EquipmentClient:_onEquipped()
     if self.Config.ThirdPersonOnly then
-        self:RigTo(Players.LocalPlayer.Character, "Right Arm", self.Config.RootJointC0.Equipped.World)
+        self:_rigToCharacter()
     elseif CameraController.InFirstPerson then
-        self:RigTo(ViewmodelController.Viewmodel.Instance, "Right Arm", self.Config.RootJointC0.Equipped.Viewmodel)
-        ViewmodelController.ShowViewmodel = true
+        self:_rigToViewmodel()
     end
 end
 
@@ -120,7 +131,7 @@ end
 
 function EquipmentClient:_onUnequipped()
     if self.IsPickedUp:Get() then
-        self:RigTo(Players.LocalPlayer.Character, self.Config.HolsterLimb)
+        self:_rigToCharacter(true)
     end
 end
 

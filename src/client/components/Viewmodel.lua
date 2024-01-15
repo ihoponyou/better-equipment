@@ -15,7 +15,7 @@ local Viewmodel = Component.new({
 function Viewmodel:Construct()
     self._trove = Trove.new()
 
-    self.Visible = false
+    self.Visible = true
     self.AnimationManager = self._trove:Construct(AnimationManager, self.Instance:WaitForChild("RigHumanoid"):WaitForChild("Animator"))
     self.Instance.Parent = workspace.CurrentCamera
 end
@@ -33,6 +33,7 @@ function Viewmodel:RenderSteppedUpdate(_dt)
 end
 
 function Viewmodel:ToggleVisibility(visible: boolean)
+    self.Visible = visible
     self.Instance["Left Arm"].Transparency = if visible then 0 else 1
     self.Instance["Right Arm"].Transparency = if visible then 0 else 1
 end
