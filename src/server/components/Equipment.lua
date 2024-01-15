@@ -97,7 +97,7 @@ function Equipment:_newRootJoint(): Motor6D
 	return rootJoint
 end
 
-function Equipment:RigTo(character: Model, limb: string)
+function Equipment:RigTo(character: Model, limb: string, c0: CFrame?)
 	if not character then error("nil character") end
 
 	local rootJoint = self:GetRootJoint()
@@ -107,6 +107,9 @@ function Equipment:RigTo(character: Model, limb: string)
 
 	self.WorldModel.Parent = character
 	rootJoint.Part0 = limbPart
+	if c0 ~= nil then
+		rootJoint.C0 = c0
+	end
 end
 
 function Equipment:Unrig()
@@ -139,9 +142,7 @@ function Equipment:PickUp(player: Player)
 	end)
 
 	ModelUtil.SetPartProperty(self.WorldModel, "CanCollide", false)
-	self:RigTo(player.Character, self.Config.HolsterLimb)
-	local rootJoint = self:GetRootJoint()
-	rootJoint.C0 = self.Config.RootJointC0.Holstered
+	self:RigTo(player.Character, self.Config.HolsterLimb, self.Config.RootJointC0.Holstered)
 
 	self.PickUpPrompt.Enabled = false
 	self.IsPickedUp:Set(true)
@@ -176,9 +177,7 @@ end
 function Equipment:Equip(player: Player)
 	if self.Owner ~= player then return end
 
-	self:RigTo(self.Owner.Character, "Right Arm")
-	local rootJoint = self:GetRootJoint()
-	rootJoint.C0 = self.Config.RootJointC0.Equipped
+	self:RigTo(self.Owner.Character, "Right Arm", self.Config.RootJointC0.Equipped.World)
 
 	self.IsEquipped:Set(true)
 end
@@ -186,9 +185,7 @@ end
 function Equipment:Unequip(player: Player)
 	if self.Owner ~= player then return end
 
-	self:RigTo(self.Owner.Character, self.Config.HolsterLimb)
-	local rootJoint = self:GetRootJoint()
-	rootJoint.C0 = self.Config.RootJointC0.Holstered
+	self:RigTo(self.Owner.Character, self.Config.HolsterLimb, self.Config.RootJointC0.Holstered)
 
 	self.IsEquipped:Set(false)
 end

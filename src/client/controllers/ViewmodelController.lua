@@ -12,7 +12,8 @@ local Viewmodel = require(script.Parent.Parent.components.Viewmodel)
 local ViewmodelController = Knit.CreateController({
     Name = "ViewmodelController",
 
-    Viewmodel = nil
+    Viewmodel = nil,
+    ShowViewmodel = false
 })
 
 function ViewmodelController:KnitInit()
@@ -42,6 +43,12 @@ function ViewmodelController:CreateViewmodel()
     newViewmodel.Parent = workspace.CurrentCamera
     local appearance = if Knit.Player.UserId > 0 then Players:GetHumanoidDescriptionFromUserId(Knit.Player.UserId) else ReplicatedStorage.test
     newViewmodel.RigHumanoid:ApplyDescriptionReset(appearance)
+
+    for _, v in newViewmodel:GetDescendants() do
+        if not v:IsA("Accessory") then continue end
+        v:Destroy()
+    end
+
     CollectionService:AddTag(newViewmodel, "Viewmodel")
 
     local success, component = Viewmodel:WaitForInstance(newViewmodel):andThen(function(_component)

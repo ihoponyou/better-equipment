@@ -6,6 +6,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Component = require(ReplicatedStorage.Packages.Component)
 local Trove = require(ReplicatedStorage.Packages.Trove)
 
+local AnimationManager = require(ReplicatedStorage.Shared.Modules.AnimationManager)
+
 local Viewmodel = Component.new({
     Tag = "Viewmodel";
 })
@@ -14,14 +16,8 @@ function Viewmodel:Construct()
     self._trove = Trove.new()
 
     self.Visible = false
+    self.AnimationManager = self._trove:Construct(AnimationManager, self.Instance:WaitForChild("RigHumanoid"):WaitForChild("Animator"))
     self.Instance.Parent = workspace.CurrentCamera
-
-    self._trove:Connect(self.Instance.DescendantAdded, function(descendant: Instance)
-        if descendant:IsA("Accessory") then
-            task.wait() -- hacky
-            descendant:Destroy()
-        end
-    end)
 end
 
 function Viewmodel:Start()

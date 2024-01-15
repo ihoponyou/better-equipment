@@ -47,9 +47,11 @@ function EquipmentClient:Start()
         if not self.IsPickedUp:Get() then return end
         if not self.IsEquipped:Get() then return end
         if inFirstPerson then
-            self:RigTo(ViewmodelController.Viewmodel.Instance, "Right Arm")
+            self:RigTo(ViewmodelController.Viewmodel.Instance, "Right Arm", self.Config.RootJointC0.Equipped.Viewmodel)
+            ViewmodelController.ShowViewmodel = true
         else
-            self:RigTo(Players.LocalPlayer.Character, "Right Arm")
+            self:RigTo(Players.LocalPlayer.Character, "Right Arm", self.Config.RootJointC0.Equipped.World)
+            ViewmodelController.ShowViewmodel = false
         end
     end)
 end
@@ -78,7 +80,7 @@ function EquipmentClient:_getRootJoint(): Motor6D
     return rootJoint
 end
 
-function EquipmentClient:RigTo(character: Model, limb: string)
+function EquipmentClient:RigTo(character: Model, limb: string, c0: CFrame?)
 	if not character then error("nil character") end
 
 	local rootJoint = self:_getRootJoint()
@@ -88,6 +90,9 @@ function EquipmentClient:RigTo(character: Model, limb: string)
 
 	self.WorldModel.Parent = character
 	rootJoint.Part0 = limbPart
+    if c0 ~= nil then
+		rootJoint.C0 = c0
+	end
 end
 
 -- pickup is handled via proximity prompt
@@ -100,9 +105,10 @@ end
 
 function EquipmentClient:_onEquipped()
     if self.Config.ThirdPersonOnly then
-        self:RigTo(Players.LocalPlayer.Character, "Right Arm")
+        self:RigTo(Players.LocalPlayer.Character, "Right Arm", self.Config.RootJointC0.Equipped.World)
     elseif CameraController.InFirstPerson then
-        self:RigTo(ViewmodelController.Viewmodel.Instance, "Right Arm")
+        self:RigTo(ViewmodelController.Viewmodel.Instance, "Right Arm", self.Config.RootJointC0.Equipped.Viewmodel)
+        ViewmodelController.ShowViewmodel = true
     end
 end
 
