@@ -1,4 +1,6 @@
 
+-- export type TrackCheck = (animationTrack: AnimationTrack) -> boolean
+
 local AnimationManager = {}
 AnimationManager.__index = AnimationManager
 
@@ -36,7 +38,7 @@ function AnimationManager:GetAnimation(animationName: string): AnimationTrack
 
 	local animationTrack = self._animations[animationName]
 
-	if animationTrack == nil then warn("No loaded animation with name \""..animationName.."\"") end
+	if animationTrack == nil then error("No loaded animation with name \""..animationName.."\"") end
 
 	return animationTrack
 end

@@ -13,17 +13,19 @@ local CameraController, ViewmodelController
 
 local EquipmentConfig = require(ReplicatedStorage.Shared.EquipmentConfig)
 local LocalPlayerExclusive = require(ReplicatedStorage.Shared.Extensions.LocalPlayerExclusive)
+local Logger = require(ReplicatedStorage.Shared.Extensions.Logger)
 
 local EquipmentClient = Component.new({
     Tag = "Equipment";
     Extensions = {
-        LocalPlayerExclusive
+        LocalPlayerExclusive,
+        Logger
     }
 })
 
 function EquipmentClient:Construct()
     self._trove = Trove.new()
-    self._clientComm = self._trove:Construct(Comm.ClientComm, self.Instance)
+    self._clientComm = self._trove:Construct(Comm.ClientComm, self.Instance, true, "Equipment")
 
     self.Config = EquipmentConfig[self.Instance.Name]
     self.Folder = ReplicatedStorage.Equipment[self.Instance.Name]

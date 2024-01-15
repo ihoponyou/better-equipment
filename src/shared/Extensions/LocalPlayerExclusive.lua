@@ -4,6 +4,10 @@ local RunService = game:GetService("RunService")
 
 local LocalPlayerExclusive = {}
 
+function LocalPlayerExclusive.ShouldConstruct()
+    return true
+end
+
 function LocalPlayerExclusive.ShouldExtend(component)
     local componentString = component.Instance.Name .. " (" .. component.Tag .. ")"
 

@@ -7,20 +7,25 @@ local Component = require(ReplicatedStorage.Packages.Component)
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Trove = require(ReplicatedStorage.Packages.Trove)
 local Comm = require(ReplicatedStorage.Packages.Comm)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local InventoryService = Knit.GetService("InventoryService")
 
 local EquipmentConfig = require(ReplicatedStorage.Shared.EquipmentConfig)
 local AnimationManager = require(ReplicatedStorage.Shared.Modules.AnimationManager)
 local ModelUtil = require(ReplicatedStorage.Shared.Modules.ModelUtil)
+local Logger = require(ReplicatedStorage.Shared.Extensions.Logger)
 
 local Equipment = Component.new({
 	Tag = "Equipment",
+	Extensions = {
+		Logger
+	}
 })
 
 function Equipment:Construct()
 	self._trove = Trove.new()
-	self._serverComm = self._trove:Construct(Comm.ServerComm, self.Instance)
+	self._serverComm = self._trove:Construct(Comm.ServerComm, self.Instance, "Equipment")
 
 	self.Config = EquipmentConfig[self.Instance.Name]
     self.Folder = ReplicatedStorage.Equipment[self.Instance.Name]
@@ -64,6 +69,7 @@ function Equipment:Construct()
 
 	-- EQUIP / UNEQUIP ----------------------------------------------------
 	self.IsEquipped = self._serverComm:CreateProperty("IsEquipped", false)
+	self.Equipped = Signal.new()
 
 	self.EquipRequest = self._serverComm:CreateSignal("EquipRequest")
 	self._trove:Connect(self.EquipRequest, function(player: Player)
@@ -119,6 +125,11 @@ function Equipment:Unrig()
 
 	self.WorldModel.Parent = self.Instance
 	rootJoint.Part0 = nil
+end
+
+function Equipment:_setEquipped(isEquipped: boolean)
+	self.IsEquipped:Set(isEquipped)
+	self.Equipped:Fire(isEquipped)
 end
 
 -- PICK UP / DROP ----------------------------------------------------
@@ -187,7 +198,7 @@ function Equipment:Equip(player: Player)
     self.AnimationManager:PlayAnimation("Idle", 0)
     self.AnimationManager:PlayAnimation("Equip", 0)
 
-	self.IsEquipped:Set(true)
+	self:_setEquipped(true)
 end
 
 function Equipment:Unequip(player: Player)
@@ -201,7 +212,7 @@ function Equipment:Unequip(player: Player)
         -- print("KILL")
     end
 
-	self.IsEquipped:Set(false)
+	self:_setEquipped(false)
 end
 
 return Equipment

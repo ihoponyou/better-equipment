@@ -7,6 +7,7 @@ local function OnPlayerAdded(player: Player)
     CollectionService:AddTag(sword, "Equipment")
     sword.Name = "ClassicSword"
     sword.Parent = workspace
+    -- sword:SetAttribute("Log", true)
 end
 
 Players.PlayerAdded:Connect(OnPlayerAdded)
