@@ -24,6 +24,7 @@ function ViewmodelController:KnitInit()
 
     Knit.Player.CharacterRemoving:Connect(function()
         self.Viewmodel.Instance:Destroy()
+        self.Viewmodel = nil
     end)
 
     RunService.RenderStepped:Connect(function(_dt)
