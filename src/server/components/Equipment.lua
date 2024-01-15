@@ -155,7 +155,7 @@ function Equipment:Drop(player: Player)
 
 	if self.IsEquipped:Get() then
 		-- print("forced unequip")
-		self:Unequip()
+		self:Unequip(self.Owner)
 	end
 
 	self.Owner = nil
