@@ -9,8 +9,10 @@ local CameraController = Knit.CreateController({
     Name = "CameraController",
 
     InFirstPerson = true,
-    AllowFirstPerson = true,
     PointOfViewChanged = Signal.new(),
+
+    AllowFirstPerson = true,
+    AllowFirstPersonChanged = Signal.new(),
 
     InCutscene = false,
 
@@ -25,6 +27,12 @@ function CameraController:KnitInit()
 
         if input.KeyCode == Enum.KeyCode.V then
             self:TogglePointOfView()
+        end
+    end)
+
+    self.AllowFirstPersonChanged:Connect(function()
+        if self.InFirstPerson and not self.AllowFirstPerson then
+            self:TogglePointOfView(false)
         end
     end)
 end
@@ -52,6 +60,11 @@ function CameraController:TogglePointOfView(firstPerson: boolean?)
 
     self._playerModule:ToggleShiftLock(not enterFirstPerson)
     self.PointOfViewChanged:Fire(self.InFirstPerson)
+end
+
+function CameraController:SetAllowFirstPerson(bool: boolean)
+    self.AllowFirstPerson = bool
+    self.AllowFirstPersonChanged:Fire(bool)
 end
 
 return CameraController

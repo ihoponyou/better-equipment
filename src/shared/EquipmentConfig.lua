@@ -7,6 +7,7 @@ return {
 	ClassicSword = {
 		SlotType = "Primary",
 		HolsterLimb = "Torso",
+		ThirdPersonOnly = true,
 		RootJointC0 = {
 			Holstered = CFrame.new(-1.1, -1.393, 0.148) * fromOrientationDeg(30, 0, 90),
 			Equipped = {

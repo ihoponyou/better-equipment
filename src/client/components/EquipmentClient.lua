@@ -26,6 +26,7 @@ function EquipmentClient:Construct()
     self._clientComm = self._trove:Construct(Comm.ClientComm, self.Instance)
 
     self.Config = EquipmentConfig[self.Instance.Name]
+    self.Folder = ReplicatedStorage.Equipment[self.Instance.Name]
 
     self.WorldModel = self.Instance:WaitForChild("WorldModel")
 
@@ -68,7 +69,7 @@ end
 
 function EquipmentClient:_cleanUpForLocalPlayer()
     if self._localPlayerTrove then
-        self._localPlayerTrove:Destroy() 
+        self._localPlayerTrove:Destroy()
     end
 end
 
@@ -107,6 +108,14 @@ function EquipmentClient:_rigToViewmodel()
     self:RigTo(ViewmodelController.Viewmodel.Instance, "Right Arm", self.Config.RootJointC0.Equipped.Viewmodel)
 end
 
+function EquipmentClient:_loadViewmodelAnimations()
+    local viewmodel = ViewmodelController.Viewmodel
+    local animationManager = viewmodel.AnimationManager
+    animationManager:LoadAnimations(self.Folder.Animations["1P"]:GetChildren())
+    animationManager:PlayAnimation("Idle", 0)
+    animationManager:PlayAnimation("Equip", 0)
+end
+
 -- pickup is handled via proximity prompt
 
 function EquipmentClient:Equip()
@@ -120,6 +129,10 @@ function EquipmentClient:_onEquipped()
         self:_rigToCharacter()
     elseif CameraController.InFirstPerson then
         self:_rigToViewmodel()
+    end
+
+    if not self.Config.ThirdPersonOnly then
+        self:_loadViewmodelAnimations()
     end
 end
 

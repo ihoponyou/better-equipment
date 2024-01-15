@@ -11,6 +11,7 @@ local Comm = require(ReplicatedStorage.Packages.Comm)
 local InventoryService = Knit.GetService("InventoryService")
 
 local EquipmentConfig = require(ReplicatedStorage.Shared.EquipmentConfig)
+local AnimationManager = require(ReplicatedStorage.Shared.Modules.AnimationManager)
 local ModelUtil = require(ReplicatedStorage.Shared.Modules.ModelUti)
 
 local Equipment = Component.new({
@@ -22,6 +23,7 @@ function Equipment:Construct()
 	self._serverComm = self._trove:Construct(Comm.ServerComm, self.Instance)
 
 	self.Config = EquipmentConfig[self.Instance.Name]
+    self.Folder = ReplicatedStorage.Equipment[self.Instance.Name]
 
 	self.WorldModel = self._trove:Clone(ReplicatedStorage.Equipment[self.Instance.Name].WorldModel)
 	self.WorldModel.Parent = self.Instance
@@ -179,6 +181,12 @@ function Equipment:Equip(player: Player)
 
 	self:RigTo(self.Owner.Character, "Right Arm", self.Config.RootJointC0.Equipped.World)
 
+	local animator = self.Owner.Character:WaitForChild("Humanoid"):WaitForChild("Animator")
+    self.AnimationManager = AnimationManager.new(animator)
+    self.AnimationManager:LoadAnimations(self.Folder.Animations["3P"]:GetChildren())
+    self.AnimationManager:PlayAnimation("Idle", 0)
+    self.AnimationManager:PlayAnimation("Equip", 0)
+
 	self.IsEquipped:Set(true)
 end
 
@@ -186,6 +194,12 @@ function Equipment:Unequip(player: Player)
 	if self.Owner ~= player then return end
 
 	self:RigTo(self.Owner.Character, self.Config.HolsterLimb, self.Config.RootJointC0.Holstered)
+
+	if self.AnimationManager then
+        self.AnimationManager:Destroy()
+        self.AnimationManager = nil
+        -- print("KILL")
+    end
 
 	self.IsEquipped:Set(false)
 end
