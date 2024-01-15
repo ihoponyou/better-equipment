@@ -1,16 +1,24 @@
 
 -- allows clients to request interaction with equipment (server)
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Comm = require(ReplicatedStorage.Packages.Comm)
 local Component = require(ReplicatedStorage.Packages.Component)
 local Trove = require(ReplicatedStorage.Packages.Trove)
+local Knit = require(ReplicatedStorage.Packages.Knit)
+
+local CameraController, ViewmodelController
 
 local EquipmentConfig = require(ReplicatedStorage.Shared.EquipmentConfig)
+local LocalPlayerExclusive = require(ReplicatedStorage.Shared.Extensions.LocalPlayerExclusive)
 
 local EquipmentClient = Component.new({
     Tag = "Equipment";
+    Extensions = {
+        LocalPlayerExclusive
+    }
 })
 
 function EquipmentClient:Construct()
@@ -29,6 +37,59 @@ function EquipmentClient:Construct()
     self.UnequipRequest = self._clientComm:GetSignal("UnequipRequest")
 end
 
+function EquipmentClient:Start()
+    Knit.OnStart():andThen(function()
+        CameraController = Knit.GetController("CameraController")
+        ViewmodelController = Knit.GetController("ViewmodelController")
+    end, warn):await()
+
+    CameraController.PointOfViewChanged:Connect(function(inFirstPerson: boolean)
+        if not self.IsPickedUp:Get() then return end
+        if not self.IsEquipped:Get() then return end
+        if inFirstPerson then
+            self:RigTo(ViewmodelController.Viewmodel.Instance, "Right Arm")
+        else
+            self:RigTo(Players.LocalPlayer.Character, "Right Arm")
+        end
+    end)
+end
+
+function EquipmentClient:_setupForLocalPlayer()
+    self._localPlayerTrove = self._trove:Extend()
+
+    self._localPlayerTrove:Add(self.IsEquipped:Observe(function(value)
+        if value then
+            self:_onEquipped()
+        else
+            self:_onUnequipped()
+        end
+    end))
+end
+
+function EquipmentClient:_cleanUpForLocalPlayer()
+    if self._localPlayerTrove then
+        self._localPlayerTrove:Destroy() 
+    end
+end
+
+function EquipmentClient:_getRootJoint(): Motor6D
+    local rootJoint = self.WorldModel.PrimaryPart:FindFirstChild("RootJoint")
+	if not rootJoint then error(self.Instance.Name..": RootJoint has been found dead") end
+    return rootJoint
+end
+
+function EquipmentClient:RigTo(character: Model, limb: string)
+	if not character then error("nil character") end
+
+	local rootJoint = self:_getRootJoint()
+
+	local limbPart = character:FindFirstChild(limb)
+	if not limbPart then error("nil " .. limb) end
+
+	self.WorldModel.Parent = character
+	rootJoint.Part0 = limbPart
+end
+
 -- pickup is handled via proximity prompt
 
 function EquipmentClient:Equip()
@@ -37,9 +98,23 @@ function EquipmentClient:Equip()
     end
 end
 
+function EquipmentClient:_onEquipped()
+    if self.Config.ThirdPersonOnly then
+        self:RigTo(Players.LocalPlayer.Character, "Right Arm")
+    elseif CameraController.InFirstPerson then
+        self:RigTo(ViewmodelController.Viewmodel.Instance, "Right Arm")
+    end
+end
+
 function EquipmentClient:Unequip()
     if self.IsPickedUp:Get() then
         self.UnequipRequest:Fire()
+    end
+end
+
+function EquipmentClient:_onUnequipped()
+    if self.IsPickedUp:Get() then
+        self:RigTo(Players.LocalPlayer.Character, self.Config.HolsterLimb)
     end
 end
 

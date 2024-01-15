@@ -132,6 +132,7 @@ function Equipment:PickUp(player: Player)
 	if not success then return end
 
 	self.Owner = player
+	self.Instance:SetAttribute("OwnerID", player.UserId)
 
 	self._deathConn = self._trove:Connect(humanoid.Died, function()
 		self:Drop(self.Owner)
@@ -157,6 +158,7 @@ function Equipment:Drop(player: Player)
 	end
 
 	self.Owner = nil
+	self.Instance:SetAttribute("OwnerID", nil)
 
 	self._trove:Remove(self._deathConn)
 	self._deathConn:Disconnect()

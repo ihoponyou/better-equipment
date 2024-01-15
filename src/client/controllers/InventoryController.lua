@@ -18,7 +18,7 @@ local InventoryController = Knit.CreateController({
     ActiveSlotChanged = Signal.new()
 })
 
-function InventoryController:_tryEquip(slot: string)
+function InventoryController:_tryEquip(newSlot: string)
     local oldSlot = self.ActiveSlot
     local currentItem = self.Inventory[oldSlot]
     if currentItem ~= nil then
@@ -26,12 +26,10 @@ function InventoryController:_tryEquip(slot: string)
         equipment:Unequip()
 
         self:SetActiveSlot(nil)
-        if slot == oldSlot then
-            return
-        end
+        if newSlot == oldSlot then return end
     end
 
-    local newItem = self.Inventory[slot]
+    local newItem = self.Inventory[newSlot]
     if not newItem then return end
     local equipment = EquipmentClient:FromInstance(newItem)
     equipment:Equip()

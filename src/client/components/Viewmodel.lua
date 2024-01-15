@@ -5,25 +5,31 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Component = require(ReplicatedStorage.Packages.Component)
 local Trove = require(ReplicatedStorage.Packages.Trove)
-local Knit = require(ReplicatedStorage.Packages.Knit)
-
-local CameraController
 
 local Viewmodel = Component.new({
     Tag = "Viewmodel";
 })
 
 function Viewmodel:Construct()
-    Knit.OnStart():andThen(function()
-        CameraController = Knit.GetController("CameraController")
-    end, warn):await()
+    self._trove = Trove.new()
 
     self.Visible = false
     self.Instance.Parent = workspace.CurrentCamera
+
+    self._trove:Connect(self.Instance.DescendantAdded, function(descendant: Instance)
+        if descendant:IsA("Accessory") then
+            task.wait() -- hacky
+            descendant:Destroy()
+        end
+    end)
 end
 
 function Viewmodel:Start()
     self:ToggleVisibility(self.Visible)
+end
+
+function Viewmodel:Stop()
+    self._trove:Destroy()
 end
 
 function Viewmodel:RenderSteppedUpdate(_dt)

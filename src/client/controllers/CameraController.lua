@@ -51,6 +51,7 @@ function CameraController:TogglePointOfView(firstPerson: boolean?)
 	end
 
     self._playerModule:ToggleShiftLock(not enterFirstPerson)
+    self.PointOfViewChanged:Fire(self.InFirstPerson)
 end
 
 return CameraController
