@@ -12,7 +12,7 @@ local InventoryService = Knit.GetService("InventoryService")
 
 local EquipmentConfig = require(ReplicatedStorage.Shared.EquipmentConfig)
 local AnimationManager = require(ReplicatedStorage.Shared.Modules.AnimationManager)
-local ModelUtil = require(ReplicatedStorage.Shared.Modules.ModelUti)
+local ModelUtil = require(ReplicatedStorage.Shared.Modules.ModelUtil)
 
 local Equipment = Component.new({
 	Tag = "Equipment",
